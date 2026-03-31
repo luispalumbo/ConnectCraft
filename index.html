@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ConnectCraft — Network Simulator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Nunito:wght@400;600;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- ═══ SIDEBAR ═══════════════════════════════════ -->
+  <aside id="sidebar">
+    <div class="brand">
+      <div class="brand-top">
+        <div class="brand-wordmark">
+          <div class="brand-icon">◈</div>
+          <div class="brand-name">ConnectCraft</div>
+        </div>
+        <!-- Light / dark mode toggle -->
+        <button id="btn-theme" class="theme-toggle" title="Switch to light mode" aria-label="Toggle theme">☀️</button>
+      </div>
+      <div class="brand-tagline">Network Simulator</div>
+    </div>
+
+    <!-- ── Device palette — End Devices + Network Devices ── -->
+    <div class="panel-section">
+      <div class="section-title">Devices</div>
+      <div class="section-hint">Drag onto the canvas</div>
+
+      <div class="palette-sub-title">End Devices</div>
+      <div id="palette-end" class="palette-grid"></div>
+
+      <div class="palette-sub-title">Network Devices</div>
+      <div id="palette-network" class="palette-grid"></div>
+    </div>
+
+    <!-- ── Tools + cable type ── -->
+    <div class="panel-section">
+      <div class="section-title">Tools</div>
+      <div id="tools">
+        <button class="tool-btn active" data-tool="select" title="Select and move devices">
+          <span class="tool-icon">⊹</span>
+          <span>Select &amp; Move</span>
+        </button>
+        <button class="tool-btn" data-tool="connect" title="Draw a cable between two devices">
+          <span class="tool-icon">⟷</span>
+          <span>Connect</span>
+        </button>
+        <button class="tool-btn" data-tool="delete" title="Click a device or cable to delete it">
+          <span class="tool-icon">✕</span>
+          <span>Delete</span>
+        </button>
+      </div>
+
+      <div class="palette-sub-title">Cable Type</div>
+      <div id="cable-type-row">
+        <button class="cable-btn active" data-cable="ethernet" title="Solid line — wired Ethernet connection">
+          🔌 Ethernet
+        </button>
+        <button class="cable-btn" data-cable="wireless" title="Dashed line — Wi-Fi / wireless connection">
+          📶 Wireless
+        </button>
+      </div>
+    </div>
+
+    <!-- ── Send a Packet ── -->
+    <div class="panel-section">
+      <div class="section-title">Send a Packet</div>
+      <label class="field-label">From</label>
+      <select id="sim-src" class="field-select">
+        <option value="">— add devices first —</option>
+      </select>
+      <label class="field-label">To</label>
+      <select id="sim-dst" class="field-select">
+        <option value="">— add devices first —</option>
+      </select>
+      <button id="btn-simulate" class="action-btn primary">▶ Send Packet</button>
+      <button id="btn-clear-sim" class="action-btn secondary">Reset Highlights</button>
+    </div>
+
+    <!-- ── Import / Export ── -->
+    <div class="panel-section">
+      <div class="section-title">Project</div>
+      <button id="btn-export" class="action-btn secondary">📤 Export JSON</button>
+      <button id="btn-import" class="action-btn secondary">📥 Import JSON</button>
+      <input type="file" id="import-file-input" accept=".json" style="display:none">
+    </div>
+
+    <!-- ── Danger zone ── -->
+    <div class="panel-section">
+      <button id="btn-clear-canvas" class="action-btn danger">🗑 Clear Canvas</button>
+    </div>
+
+    <div class="sidebar-footer">
+      <span>Double-click a device to rename it</span>
+    </div>
+  </aside>
+
+  <!-- ═══ WORKSPACE ════════════════════════════════ -->
+  <div id="workspace">
+    <div id="statusbar">
+      <span id="status-text">👋 Drag a device onto the canvas to get started!</span>
+      <span id="counter-text">0 devices · 0 connections</span>
+    </div>
+
+    <div id="canvas-wrap">
+      <!-- SVG layer for connection lines -->
+      <svg id="svg-layer" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+            <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+            <feMerge>
+              <feMergeNode in="coloredBlur"/>
+              <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+          </filter>
+          <filter id="glow-strong" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="5" result="coloredBlur"/>
+            <feMerge>
+              <feMergeNode in="coloredBlur"/>
+              <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+          </filter>
+        </defs>
+      </svg>
+
+      <div id="canvas"></div>
+      <div id="packet-layer"></div>
+
+      <div id="empty-hint">
+        <div class="empty-icon">⬡</div>
+        <div class="empty-title">Canvas is empty</div>
+        <div class="empty-sub">Drag devices from the sidebar to build your network</div>
+      </div>
+    </div>
+
+    <div id="log-panel">
+      <div class="log-header">
+        <span class="log-title">📋 Packet Trace Log</span>
+        <button id="btn-clear-log" class="log-clear-btn">Clear</button>
+      </div>
+      <div id="log-body"></div>
+    </div>
+  </div>
+
+  <!-- ═══ RENAME MODAL ══════════════════════════════ -->
+  <div id="modal-backdrop" class="hidden">
+    <div id="modal-box">
+      <div class="modal-title">Rename Device</div>
+      <input id="modal-input" type="text" maxlength="20" placeholder="Enter a name…" autocomplete="off">
+      <div class="modal-actions">
+        <button id="modal-ok" class="action-btn primary">Rename</button>
+        <button id="modal-cancel" class="action-btn secondary">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/devices.js"></script>
+  <script src="js/canvas.js"></script>
+  <script src="js/simulation.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
