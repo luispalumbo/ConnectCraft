@@ -390,11 +390,15 @@ body {
 #svg-layer {
   position: absolute; inset: 0;
   width: 100%; height: 100%;
-  pointer-events: none;
+  /* pointer-events must NOT be none here — lines need to receive clicks.
+     Empty SVG areas have no fill so clicks pass through naturally. */
   overflow: visible;
   z-index: 5;
 }
-#canvas      { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 10; }
+/* pointer-events: none lets clicks pass through the transparent canvas div
+   to the SVG layer below. Device divs (children) are unaffected — they
+   still receive their own clicks via normal hit-testing. */
+#canvas      { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 10; pointer-events: none; }
 #packet-layer{ position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 30; }
 
 /* Empty state */
@@ -505,6 +509,20 @@ body {
 /* Cursor overrides */
 body.tool-delete  .device { cursor: not-allowed; }
 body.tool-connect .device { cursor: crosshair; }
+body.tool-simulate .device { cursor: cell; }
+
+/* Simulate tool button */
+.tool-btn[data-tool="simulate"]:hover  { border-color: var(--success); color: var(--success); background: rgba(0,230,118,0.08); }
+.tool-btn[data-tool="simulate"].active { background: var(--success); border-color: var(--success); color: #000; box-shadow: 0 0 14px rgba(0,230,118,0.4); }
+
+/* Wide invisible hit-area line — makes cables easy to click for students */
+.connection-hit {
+  stroke: transparent;
+  stroke-width: 18;
+  pointer-events: stroke;
+  cursor: pointer;
+  fill: none;
+}
 
 /* ════════════════════════════════════════════════════
    SVG CONNECTION LINES
@@ -515,16 +533,22 @@ body.tool-connect .device { cursor: crosshair; }
   stroke-linecap: round;
   filter: url(#glow);
   opacity: 0.65;
-  pointer-events: stroke;
-  cursor: pointer;
+  /* Visual line — pointer-events handled by .connection-hit sibling */
+  pointer-events: none;
   transition: stroke 0.22s, stroke-width 0.18s, opacity 0.18s;
 }
-.connection-line:hover          { stroke-width: 4.5; opacity: 1; stroke: var(--accent); }
+/* Hover: when mouse is over the hit area, highlight the visual line via ~ sibling selector */
+.connection-hit:hover ~ .connection-line        { stroke-width: 4.5; opacity: 1; stroke: var(--accent); filter: url(#glow-strong); }
+.connection-hit:hover ~ .connection-line.wireless { stroke: var(--cable-wireless); }
+
 .connection-line.wireless       { stroke: var(--cable-wireless); stroke-dasharray: 10 6; }
-.connection-line.wireless:hover { stroke: var(--cable-wireless); filter: url(#glow-strong); opacity: 1; }
 .connection-line.highlighted    { stroke: var(--cable-highlight); stroke-width: 3.5; opacity: 1; filter: url(#glow-strong); stroke-dasharray: none; }
 .connection-line.wireless.highlighted { stroke-dasharray: 10 6; }
-.connection-line.selected       { stroke: var(--cable-selected); stroke-width: 3.5; opacity: 1; }
+.connection-line.selected       { stroke: var(--cable-selected); stroke-width: 3.5; opacity: 1; filter: none; }
+
+/* Delete tool: show a red tint over hit area on hover */
+body.tool-delete .connection-hit:hover ~ .connection-line { stroke: var(--danger); opacity: 1; filter: none; }
+body.tool-delete .connection-hit { cursor: not-allowed; }
 
 /* ════════════════════════════════════════════════════
    PACKET

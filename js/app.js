@@ -20,9 +20,10 @@
 //  STATE
 // ════════════════════════════════════════════════════
 
-let currentTool      = 'select';   // 'select' | 'connect' | 'delete'
+let currentTool      = 'select';   // 'select' | 'connect' | 'delete' | 'simulate'
 let currentCableType = 'ethernet'; // 'ethernet' | 'wireless'
 let connectSource    = null;       // device id awaiting second click in connect mode
+let simulateSource   = null;       // device id awaiting second click in simulate mode
 let dragState        = null;       // { deviceId, offsetX, offsetY }
 let renameTarget     = null;       // device object being renamed
 let simRunning       = false;      // guard against overlapping simulations
@@ -120,21 +121,22 @@ function bindToolButtons() {
 }
 
 function setTool(tool) {
-  currentTool   = tool;
-  connectSource = null;
+  currentTool    = tool;
+  connectSource  = null;
+  simulateSource = null;
   CanvasManager.clearHighlights();
 
   document.querySelectorAll('.tool-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.tool === tool);
   });
 
-  // Drive cursor styling via body class
   document.body.className = `tool-${tool}`;
 
   const hints = {
-    select:  'Select tool — drag devices to reposition them. Double-click a device to rename it.',
-    connect: 'Connect tool — click a device to start a cable, then click another to finish.',
-    delete:  'Delete tool — click any device or cable to remove it from the canvas.'
+    select:   'Select tool — drag devices to reposition them. Double-click to rename.',
+    connect:  'Connect tool — click a device to start a cable, then click another to finish.',
+    delete:   'Delete tool — click any device or cable to remove it.',
+    simulate: 'Simulate tool — click any two connected devices to send a packet between them!'
   };
   setStatus(hints[tool] || '');
 }
@@ -183,18 +185,20 @@ function bindCanvasEvents() {
     setStatus(`Placed ${device.name}. Switch to the Connect tool to cable devices together.`);
   });
 
-  // ── Click SVG lines — delete or select ──
+  // ── Click SVG hit-area lines — delete or select a cable ──
+  // .connection-hit lines have pointer-events:stroke (18px hit zone).
+  // #canvas has pointer-events:none so clicks pass through to the SVG layer.
   svgEl.addEventListener('click', e => {
-    const line = e.target.closest('.connection-line');
-    if (!line) return;
+    const hit = e.target.closest('.connection-hit');
+    if (!hit) return;
 
-    const connId = line.dataset.id;
+    const connId = hit.dataset.id;
 
     if (currentTool === 'delete') {
       const conn = CanvasManager.getConnection(connId);
       if (conn) {
-        const srcName  = CanvasManager.getDevice(conn.src)?.name  ?? '?';
-        const dstName  = CanvasManager.getDevice(conn.dst)?.name  ?? '?';
+        const srcName   = CanvasManager.getDevice(conn.src)?.name ?? '?';
+        const dstName   = CanvasManager.getDevice(conn.dst)?.name ?? '?';
         const typeLabel = conn.cableType === 'wireless' ? 'wireless' : 'ethernet';
         log(`Removed ${typeLabel} cable: ${srcName} ↔ ${dstName}`, 'step');
       }
@@ -204,16 +208,20 @@ function bindCanvasEvents() {
 
     if (currentTool === 'select') {
       CanvasManager.clearHighlights();
-      line.classList.add('selected');
+      const vizLine = svgEl.querySelector(`.connection-line[data-id="${connId}"]`);
+      if (vizLine) vizLine.classList.add('selected');
     }
   });
 
-  // ── Click empty canvas — deselect ──
-  canvasEl.addEventListener('click', e => {
-    if (e.target === canvasEl) {
-      connectSource = null;
-      CanvasManager.clearHighlights();
-    }
+  // ── Click empty canvas area — deselect everything ──
+  // Listen on canvasWrap (parent); filter out clicks that came from
+  // devices, cables, or other interactive elements.
+  canvasWrap.addEventListener('click', e => {
+    if (e.target.closest('.device, .connection-hit, .packet')) return;
+    if (e.target.closest('#sidebar')) return;
+    connectSource  = null;
+    simulateSource = null;
+    CanvasManager.clearHighlights();
   });
 }
 
@@ -294,12 +302,8 @@ function handleDeviceClick(device) {
   if (currentTool === 'delete') {
     const connCount = CanvasManager.getConnections()
       .filter(c => c.src === device.id || c.dst === device.id).length;
-
     CanvasManager.removeDevice(device.id);
-
-    const cMsg = connCount > 0
-      ? ` and ${connCount} cable${connCount > 1 ? 's' : ''}`
-      : '';
+    const cMsg = connCount > 0 ? ` and ${connCount} cable${connCount > 1 ? 's' : ''}` : '';
     log(`Removed device: ${device.name}${cMsg}`, 'step');
     setStatus(`Deleted ${device.name}${cMsg}.`);
     return;
@@ -311,27 +315,45 @@ function handleDeviceClick(device) {
       connectSource = device.id;
       CanvasManager.setConnectingSource(device.id);
       setStatus(`Connecting from ${device.name} — click the destination device.`);
-
     } else if (connectSource === device.id) {
       connectSource = null;
       CanvasManager.clearHighlights();
       setStatus('Connection cancelled. Click a device to start again.');
-
     } else {
       const srcDevice = CanvasManager.getDevice(connectSource);
       const conn      = CanvasManager.addConnection(connectSource, device.id, currentCableType);
-
       if (conn) {
         const typeLabel = currentCableType === 'wireless' ? '📶 wireless' : '🔌 ethernet';
         log(`Connected (${typeLabel}): ${srcDevice.name} ↔ ${device.name}`, 'info');
         setStatus(`${currentCableType === 'wireless' ? 'Wireless link' : 'Cable'} added: ${srcDevice.name} ↔ ${device.name}`);
       } else {
         log(`Already connected: ${srcDevice.name} ↔ ${device.name}`, 'warn');
-        setStatus('Those devices are already connected! Delete the existing cable first.');
+        setStatus('Those devices are already connected!');
       }
-
       connectSource = null;
       CanvasManager.clearHighlights();
+    }
+    return;
+  }
+
+  // ── Simulate ──────────────────────────────────
+  if (currentTool === 'simulate') {
+    if (!simulateSource) {
+      // First click — pick source
+      simulateSource = device.id;
+      CanvasManager.setConnectingSource(device.id);
+      setStatus(`Sending from ${device.name} — now click the destination device.`);
+    } else if (simulateSource === device.id) {
+      // Clicked same device — cancel
+      simulateSource = null;
+      CanvasManager.clearHighlights();
+      setStatus('Simulation cancelled. Click a device to choose a new source.');
+    } else {
+      // Second click — run simulation
+      const srcId = simulateSource;
+      simulateSource = null;
+      CanvasManager.clearHighlights();
+      _runSimulationBetween(srcId, device.id);
     }
     return;
   }
@@ -392,29 +414,31 @@ function confirmRename() {
 // ════════════════════════════════════════════════════
 
 function bindSimButtons() {
-  document.getElementById('btn-simulate').addEventListener('click', runSimulation);
+  document.getElementById('btn-simulate').addEventListener('click', () => {
+    const srcId = simSrc.value;
+    const dstId = simDst.value;
+    if (!srcId || !dstId) { log('Please select both a source and destination device.', 'error'); return; }
+    if (srcId === dstId)  { log('Source and destination must be different devices.', 'error'); return; }
+    _runSimulationBetween(srcId, dstId);
+  });
+
   document.getElementById('btn-clear-sim').addEventListener('click', () => {
     CanvasManager.clearHighlights();
     log('Highlights cleared.', 'step');
   });
 }
 
-/** Run a BFS packet simulation between the selected devices. */
-async function runSimulation() {
+/**
+ * Core simulation routine — called by both the dropdown button and the Simulate tool.
+ * Finds the shortest path using BFS, highlights it, and animates a packet.
+ * Uses plain language suitable for Year 7–8 students.
+ *
+ * @param {string} srcId  - source device id
+ * @param {string} dstId  - destination device id
+ */
+async function _runSimulationBetween(srcId, dstId) {
   if (simRunning) {
-    log('A simulation is already running — please wait.', 'warn');
-    return;
-  }
-
-  const srcId = simSrc.value;
-  const dstId = simDst.value;
-
-  if (!srcId || !dstId) {
-    log('Please select both a source and destination device.', 'error');
-    return;
-  }
-  if (srcId === dstId) {
-    log('Source and destination must be different devices.', 'error');
+    log('A packet is already travelling — please wait for it to arrive!', 'warn');
     return;
   }
 
@@ -422,37 +446,39 @@ async function runSimulation() {
   const dst = CanvasManager.getDevice(dstId);
 
   log('──────────────────────────────', 'step');
-  log(`Sending packet: ${src.name} → ${dst.name}`, 'info');
+  log(`📦 Sending packet: ${src.name} → ${dst.name}`, 'info');
 
   const result = Simulation.findPath(srcId, dstId);
 
   if (!result) {
-    log(`No path found! Make sure ${src.name} and ${dst.name} are connected.`, 'error');
-    setStatus(`No path found between ${src.name} and ${dst.name}. Check your cables.`);
+    log(`❌ No path found! ${src.name} and ${dst.name} are not connected.`, 'error');
+    setStatus(`Can't reach ${dst.name} from ${src.name} — check your cables!`);
     return;
   }
 
   const { devicePath, connPath } = result;
   const names = devicePath.map(id => CanvasManager.getDevice(id)?.name ?? id);
+  const hops  = devicePath.length - 1;
 
-  log(`Route (${devicePath.length} hop${devicePath.length !== 1 ? 's' : ''}): ${names.join(' → ')}`, 'success');
-
+  // Simple, student-friendly log output
+  log(`🗺️  Path found! ${hops} hop${hops !== 1 ? 's' : ''}: ${names.join(' → ')}`, 'success');
   names.forEach((name, i) => {
-    log(i === 0
-      ? `  [1] Packet leaves ${name}`
-      : `  [${i + 1}] Arrives at ${name}`, 'step');
+    if (i === 0)                      log(`  ▶ Leaving  ${name}`, 'step');
+    else if (i === names.length - 1)  log(`  ✓ Arrived at ${name}`, 'step');
+    else                              log(`  ↪ Through  ${name}`, 'step');
   });
 
+  // Highlight path on canvas
   CanvasManager.clearHighlights();
   CanvasManager.highlightPath(devicePath, connPath);
 
+  // Animate packet
   simRunning = true;
   document.getElementById('btn-simulate').disabled = true;
-
   try {
     await Simulation.animatePacket(devicePath);
-    log(`✓ Packet delivered successfully to ${dst.name}!`, 'success');
-    setStatus(`Delivered to ${dst.name} via ${devicePath.length} device${devicePath.length !== 1 ? 's' : ''}!`);
+    log(`✅ Packet delivered to ${dst.name}!`, 'success');
+    setStatus(`✅ Delivered to ${dst.name} in ${hops} hop${hops !== 1 ? 's' : ''}!`);
   } finally {
     simRunning = false;
     document.getElementById('btn-simulate').disabled = false;

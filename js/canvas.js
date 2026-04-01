@@ -177,11 +177,13 @@ const CanvasManager = (() => {
     );
     if (duplicate) return null;
 
-    const id   = `c${_nextId++}`;
-    const line = _buildSvgLine(id, cableType);
-    _svgEl.appendChild(line);
+    const id = `c${_nextId++}`;
+    const { hitEl, lineEl } = _buildConnectionElements(id, cableType);
+    // hitEl must come first so the CSS ~ sibling selector can reach lineEl
+    _svgEl.appendChild(hitEl);
+    _svgEl.appendChild(lineEl);
 
-    const conn = { id, src: srcId, dst: dstId, cableType, el: line };
+    const conn = { id, src: srcId, dst: dstId, cableType, el: lineEl, hitEl };
     _connections.push(conn);
     _updateLine(conn);
     _notify();
@@ -192,27 +194,40 @@ const CanvasManager = (() => {
    * Internal: create a connection with a specific id (used by importData).
    */
   function _createConnection(id, srcId, dstId, cableType = 'ethernet') {
-    const line = _buildSvgLine(id, cableType);
-    _svgEl.appendChild(line);
-    const conn = { id, src: srcId, dst: dstId, cableType, el: line };
+    const { hitEl, lineEl } = _buildConnectionElements(id, cableType);
+    _svgEl.appendChild(hitEl);
+    _svgEl.appendChild(lineEl);
+    const conn = { id, src: srcId, dst: dstId, cableType, el: lineEl, hitEl };
     _connections.push(conn);
     _updateLine(conn);
     return conn;
   }
 
   /**
-   * Build an SVG <line> element for a connection.
-   * Ethernet = solid, Wireless = dashed with a different colour class.
+   * Build a pair of SVG elements for one connection:
+   *   hitEl  — wide transparent line; receives pointer events (easy to click)
+   *   lineEl — thin styled line; visual only, pointer-events: none
+   *
+   * The hit element carries data-id so click handlers can find the connection.
+   * Both must be appended to the SVG in order (hitEl first) so the CSS
+   * adjacent-sibling selector (.connection-hit:hover ~ .connection-line)
+   * can apply hover styles to the visual line.
    */
-  function _buildSvgLine(id, cableType) {
-    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-    line.classList.add('connection-line');
-    if (cableType === 'wireless') {
-      line.classList.add('wireless');
-    }
-    line.dataset.id         = id;
-    line.dataset.cableType  = cableType;
-    return line;
+  function _buildConnectionElements(id, cableType) {
+    // Wide invisible hit target
+    const hitEl = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    hitEl.classList.add('connection-hit');
+    hitEl.dataset.id       = id;
+    hitEl.dataset.cableType = cableType;
+
+    // Visible styled line
+    const lineEl = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    lineEl.classList.add('connection-line');
+    if (cableType === 'wireless') lineEl.classList.add('wireless');
+    lineEl.dataset.id       = id;
+    lineEl.dataset.cableType = cableType;
+
+    return { hitEl, lineEl };
   }
 
   /**
@@ -228,6 +243,7 @@ const CanvasManager = (() => {
     const conn = _connections.find(c => c.id === id);
     if (conn) {
       conn.el.remove();
+      if (conn.hitEl) conn.hitEl.remove();
       _connections = _connections.filter(c => c.id !== id);
     }
   }
@@ -244,15 +260,18 @@ const CanvasManager = (() => {
 
   // ── SVG line update helpers ──────────────────────
 
-  /** Reposition a single SVG line to match its device centres. */
+  /** Reposition a single SVG line pair to match its device centres. */
   function _updateLine(conn) {
     const src = getDevice(conn.src);
     const dst = getDevice(conn.dst);
     if (!src || !dst) return;
-    conn.el.setAttribute('x1', src.x);
-    conn.el.setAttribute('y1', src.y);
-    conn.el.setAttribute('x2', dst.x);
-    conn.el.setAttribute('y2', dst.y);
+    [conn.el, conn.hitEl].forEach(el => {
+      if (!el) return;
+      el.setAttribute('x1', src.x);
+      el.setAttribute('y1', src.y);
+      el.setAttribute('x2', dst.x);
+      el.setAttribute('y2', dst.y);
+    });
   }
 
   /** Update all lines connected to a given device (called when it moves). */
