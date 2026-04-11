@@ -20,10 +20,9 @@
 //  STATE
 // ════════════════════════════════════════════════════
 
-let currentTool      = 'select';   // 'select' | 'connect' | 'delete' | 'simulate'
+let currentTool      = 'select';   // 'select' | 'connect' | 'delete'
 let currentCableType = 'ethernet'; // 'ethernet' | 'wireless'
 let connectSource    = null;       // device id awaiting second click in connect mode
-let simulateSource   = null;       // device id awaiting second click in simulate mode
 let dragState        = null;       // { deviceId, offsetX, offsetY }
 let renameTarget     = null;       // device object being renamed
 let simRunning       = false;      // guard against overlapping simulations
@@ -121,9 +120,8 @@ function bindToolButtons() {
 }
 
 function setTool(tool) {
-  currentTool    = tool;
-  connectSource  = null;
-  simulateSource = null;
+  currentTool   = tool;
+  connectSource = null;
   CanvasManager.clearHighlights();
 
   document.querySelectorAll('.tool-btn').forEach(b => {
@@ -133,10 +131,9 @@ function setTool(tool) {
   document.body.className = `tool-${tool}`;
 
   const hints = {
-    select:   'Select tool — drag devices to reposition them. Double-click to rename.',
-    connect:  'Connect tool — click a device to start a cable, then click another to finish.',
-    delete:   'Delete tool — click any device or cable to remove it.',
-    simulate: 'Simulate tool — click any two connected devices to send a packet between them!'
+    select:  'Select tool — drag devices to reposition them. Double-click to rename.',
+    connect: 'Connect tool — click a device to start a cable, then click another to finish.',
+    delete:  'Delete tool — click any device or cable to remove it.'
   };
   setStatus(hints[tool] || '');
 }
@@ -219,8 +216,7 @@ function bindCanvasEvents() {
   canvasWrap.addEventListener('click', e => {
     if (e.target.closest('.device, .connection-hit, .packet')) return;
     if (e.target.closest('#sidebar')) return;
-    connectSource  = null;
-    simulateSource = null;
+    connectSource = null;
     CanvasManager.clearHighlights();
   });
 }
@@ -280,8 +276,13 @@ function attachDeviceListeners(device) {
   el.addEventListener('mousedown', e => {
     if (currentTool !== 'select') return;
     if (e.button !== 0) return;
+    // Do not start a drag while the rename modal is open
+    if (!modalBackdrop.classList.contains('hidden')) return;
     e.stopPropagation();
-    e.preventDefault();
+    // NOTE: No e.preventDefault() here. It is not needed because
+    // body { user-select: none } already prevents text selection during drag.
+    // Calling preventDefault() on mousedown suppresses default browser form
+    // activation and can prevent modal buttons from firing correctly.
 
     const rect = canvasWrap.getBoundingClientRect();
     dragState = {
@@ -290,7 +291,7 @@ function attachDeviceListeners(device) {
       offsetY:  e.clientY - rect.top  - device.y
     };
 
-    el.style.zIndex        = 20;
+    el.style.zIndex        = 30;
     document.body.style.cursor = 'grabbing';
   });
 }
@@ -336,28 +337,6 @@ function handleDeviceClick(device) {
     return;
   }
 
-  // ── Simulate ──────────────────────────────────
-  if (currentTool === 'simulate') {
-    if (!simulateSource) {
-      // First click — pick source
-      simulateSource = device.id;
-      CanvasManager.setConnectingSource(device.id);
-      setStatus(`Sending from ${device.name} — now click the destination device.`);
-    } else if (simulateSource === device.id) {
-      // Clicked same device — cancel
-      simulateSource = null;
-      CanvasManager.clearHighlights();
-      setStatus('Simulation cancelled. Click a device to choose a new source.');
-    } else {
-      // Second click — run simulation
-      const srcId = simulateSource;
-      simulateSource = null;
-      CanvasManager.clearHighlights();
-      _runSimulationBetween(srcId, device.id);
-    }
-    return;
-  }
-
   // ── Select ────────────────────────────────────
   CanvasManager.selectDevice(device.id);
 }
@@ -375,38 +354,50 @@ function openRenameModal(device) {
 }
 
 function bindModalControls() {
-  document.getElementById('modal-ok').addEventListener('click', confirmRename);
+  const okBtn     = document.getElementById('modal-ok');
+  const cancelBtn = document.getElementById('modal-cancel');
 
-  document.getElementById('modal-cancel').addEventListener('click', () => {
-    modalBackdrop.classList.add('hidden');
-    renameTarget = null;
+  // Use 'pointerdown' instead of 'click' so the buttons respond immediately,
+  // before any focus-management or mousedown default-prevention can interfere.
+  // e.preventDefault() on the OK button's pointerdown keeps focus on the input
+  // so modalInput.value is still accessible when confirmRename() runs.
+  okBtn.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    e.stopPropagation();
+    confirmRename();
   });
 
+  cancelBtn.addEventListener('pointerdown', e => {
+    e.stopPropagation();
+    closeModal();
+  });
+
+  // Keep keyboard support on the input
   modalInput.addEventListener('keydown', e => {
     if (e.key === 'Enter')  confirmRename();
-    if (e.key === 'Escape') {
-      modalBackdrop.classList.add('hidden');
-      renameTarget = null;
-    }
+    if (e.key === 'Escape') closeModal();
   });
 
-  modalBackdrop.addEventListener('click', e => {
-    if (e.target === modalBackdrop) {
-      modalBackdrop.classList.add('hidden');
-      renameTarget = null;
-    }
+  // Click on the dark backdrop (not the modal box) also closes
+  modalBackdrop.addEventListener('pointerdown', e => {
+    if (e.target === modalBackdrop) closeModal();
   });
+}
+
+function closeModal() {
+  modalBackdrop.classList.add('hidden');
+  renameTarget = null;
 }
 
 function confirmRename() {
   if (!renameTarget) return;
   const newName = modalInput.value.trim();
-  if (newName) {
+  if (newName && newName !== renameTarget.name) {
+    const oldName = renameTarget.name;
     CanvasManager.renameDevice(renameTarget.id, newName);
-    log(`Renamed "${renameTarget.name}" → "${newName}"`, 'step');
+    log(`Renamed "${oldName}" → "${newName}"`, 'step');
   }
-  modalBackdrop.classList.add('hidden');
-  renameTarget = null;
+  closeModal();
 }
 
 // ════════════════════════════════════════════════════
@@ -417,9 +408,26 @@ function bindSimButtons() {
   document.getElementById('btn-simulate').addEventListener('click', () => {
     const srcId = simSrc.value;
     const dstId = simDst.value;
-    if (!srcId || !dstId) { log('Please select both a source and destination device.', 'error'); return; }
-    if (srcId === dstId)  { log('Source and destination must be different devices.', 'error'); return; }
-    _runSimulationBetween(srcId, dstId);
+
+    if (!srcId || !dstId) {
+      log('⚠️ Please select both a Source and Destination device first.', 'error');
+      setStatus('⚠️ Select a Source and Destination device from the dropdowns, then click Send Packet.');
+      return;
+    }
+    if (srcId === dstId) {
+      log('⚠️ Source and destination must be different devices.', 'error');
+      setStatus('⚠️ Choose two different devices — source and destination cannot be the same.');
+      return;
+    }
+
+    // Immediate feedback so the user knows the button registered
+    setStatus('📦 Sending packet…');
+    _runSimulationBetween(srcId, dstId).catch(err => {
+      log(`❌ Simulation error: ${err.message}`, 'error');
+      setStatus('❌ Something went wrong. Check your network has connected devices.');
+      simRunning = false;
+      document.getElementById('btn-simulate').disabled = false;
+    });
   });
 
   document.getElementById('btn-clear-sim').addEventListener('click', () => {
@@ -429,30 +437,38 @@ function bindSimButtons() {
 }
 
 /**
- * Core simulation routine — called by both the dropdown button and the Simulate tool.
- * Finds the shortest path using BFS, highlights it, and animates a packet.
- * Uses plain language suitable for Year 7–8 students.
+ * Core simulation routine.
+ * Finds the shortest path using BFS, highlights it on the canvas,
+ * and animates a glowing packet along the route.
  *
  * @param {string} srcId  - source device id
  * @param {string} dstId  - destination device id
  */
 async function _runSimulationBetween(srcId, dstId) {
   if (simRunning) {
-    log('A packet is already travelling — please wait for it to arrive!', 'warn');
+    log('⏳ A packet is already travelling — wait for it to arrive!', 'warn');
+    setStatus('⏳ Simulation already running — please wait.');
     return;
   }
 
+  // Guard: make sure both devices still exist (they could have been deleted)
   const src = CanvasManager.getDevice(srcId);
   const dst = CanvasManager.getDevice(dstId);
+  if (!src || !dst) {
+    log('❌ Could not find one or both selected devices. Please reselect.', 'error');
+    setStatus('❌ Device not found — please reselect source and destination.');
+    return;
+  }
 
   log('──────────────────────────────', 'step');
   log(`📦 Sending packet: ${src.name} → ${dst.name}`, 'info');
+  setStatus(`📦 Looking for a route from ${src.name} to ${dst.name}…`);
 
   const result = Simulation.findPath(srcId, dstId);
 
   if (!result) {
     log(`❌ No path found! ${src.name} and ${dst.name} are not connected.`, 'error');
-    setStatus(`Can't reach ${dst.name} from ${src.name} — check your cables!`);
+    setStatus(`❌ No route found — make sure ${src.name} and ${dst.name} are connected by cables.`);
     return;
   }
 
@@ -460,25 +476,24 @@ async function _runSimulationBetween(srcId, dstId) {
   const names = devicePath.map(id => CanvasManager.getDevice(id)?.name ?? id);
   const hops  = devicePath.length - 1;
 
-  // Simple, student-friendly log output
-  log(`🗺️  Path found! ${hops} hop${hops !== 1 ? 's' : ''}: ${names.join(' → ')}`, 'success');
+  log(`🗺️  Path: ${hops} hop${hops !== 1 ? 's' : ''}: ${names.join(' → ')}`, 'success');
   names.forEach((name, i) => {
-    if (i === 0)                      log(`  ▶ Leaving  ${name}`, 'step');
-    else if (i === names.length - 1)  log(`  ✓ Arrived at ${name}`, 'step');
-    else                              log(`  ↪ Through  ${name}`, 'step');
+    if (i === 0)                     log(`  ▶ Leaving   ${name}`, 'step');
+    else if (i === names.length - 1) log(`  ✓ Arrived at ${name}`, 'step');
+    else                             log(`  ↪ Through   ${name}`, 'step');
   });
 
-  // Highlight path on canvas
+  // Highlight the route on the canvas (devices glow green, cables glow green)
   CanvasManager.clearHighlights();
   CanvasManager.highlightPath(devicePath, connPath);
 
-  // Animate packet
+  // Animate the glowing packet dot along the route
   simRunning = true;
   document.getElementById('btn-simulate').disabled = true;
   try {
     await Simulation.animatePacket(devicePath);
     log(`✅ Packet delivered to ${dst.name}!`, 'success');
-    setStatus(`✅ Delivered to ${dst.name} in ${hops} hop${hops !== 1 ? 's' : ''}!`);
+    setStatus(`✅ Packet delivered to ${dst.name} in ${hops} hop${hops !== 1 ? 's' : ''}! The green path shows the route.`);
   } finally {
     simRunning = false;
     document.getElementById('btn-simulate').disabled = false;
@@ -604,8 +619,9 @@ function updateSimSelects() {
     sel.innerHTML = '<option value="">— select —</option>';
     devices.forEach(d => {
       const opt = document.createElement('option');
+      const def = DEVICE_TYPES[d.type];
       opt.value = d.id;
-      opt.text  = `${DEVICE_TYPES[d.type].icon} ${d.name}`;
+      opt.text  = def ? `${def.label}: ${d.name}` : d.name;
       sel.appendChild(opt);
     });
   });

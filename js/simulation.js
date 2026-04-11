@@ -28,15 +28,12 @@ const Simulation = (() => {
    * Find the shortest path between two devices using
    * Breadth-First Search (BFS).
    *
-   * BFS is a great algorithm to teach Year 7–8 students:
-   * it explores the network level by level, guaranteeing
-   * the shortest path (fewest hops) is found first.
+   * BFS explores the network level by level, guaranteeing
+   * the shortest path (fewest hops) is always found first.
    *
    * @param {string} srcId  - starting device id
    * @param {string} dstId  - destination device id
    * @returns {{ devicePath: string[], connPath: string[] } | null}
-   *          Arrays of device and connection ids on the path,
-   *          or null if no path exists.
    */
   function findPath(srcId, dstId) {
     if (srcId === dstId) {
@@ -45,7 +42,7 @@ const Simulation = (() => {
 
     const connections = CanvasManager.getConnections();
 
-    // Build an adjacency list:  deviceId → [ { neighbor, connId }, … ]
+    // Build adjacency list:  deviceId → [ { neighbor, connId }, … ]
     const adj = {};
     connections.forEach(c => {
       if (!adj[c.src]) adj[c.src] = [];
@@ -54,7 +51,7 @@ const Simulation = (() => {
       adj[c.dst].push({ neighbor: c.src, connId: c.id });
     });
 
-    // BFS queue: each item tracks the path taken to reach here
+    // BFS — each queue item carries its full path so far
     const queue = [{
       id:         srcId,
       devicePath: [srcId],
@@ -66,8 +63,7 @@ const Simulation = (() => {
     while (queue.length > 0) {
       const { id, devicePath, connPath } = queue.shift();
 
-      const neighbours = adj[id] || [];
-      for (const { neighbor, connId } of neighbours) {
+      for (const { neighbor, connId } of (adj[id] || [])) {
         if (visited.has(neighbor)) continue;
         visited.add(neighbor);
 
@@ -75,7 +71,6 @@ const Simulation = (() => {
         const newConnPath   = [...connPath,   connId];
 
         if (neighbor === dstId) {
-          // Found it — return the complete path
           return { devicePath: newDevicePath, connPath: newConnPath };
         }
 
@@ -89,7 +84,11 @@ const Simulation = (() => {
   // ── Packet animation ─────────────────────────────
 
   /**
-   * Animate a packet (glowing dot) travelling along a device path.
+   * Animate a glowing packet dot travelling along a device path.
+   *
+   * Uses requestAnimationFrame so each frame is driven by the browser's
+   * render loop — avoids the timing desync that occurs when CSS transitions
+   * and setTimeout run independently.
    *
    * @param {string[]} devicePath - ordered array of device ids
    * @returns {Promise<void>} resolves when animation is complete
@@ -97,54 +96,61 @@ const Simulation = (() => {
   async function animatePacket(devicePath) {
     if (devicePath.length < 2) return;
 
-    // Create the packet element
+    // Build packet element and place it at the first device immediately
     const packet = document.createElement('div');
     packet.className = 'packet';
     _packetLayer.appendChild(packet);
 
-    // Place at starting device
-    const start = CanvasManager.getDevice(devicePath[0]);
-    packet.style.left = `${start.x}px`;
-    packet.style.top  = `${start.y}px`;
+    const startDevice = CanvasManager.getDevice(devicePath[0]);
+    packet.style.left = `${startDevice.x}px`;
+    packet.style.top  = `${startDevice.y}px`;
 
-    // Force reflow so transition starts cleanly
-    packet.getBoundingClientRect();
-
-    // Move segment by segment
+    // Animate one segment at a time
     for (let i = 0; i < devicePath.length - 1; i++) {
       const from = CanvasManager.getDevice(devicePath[i]);
       const to   = CanvasManager.getDevice(devicePath[i + 1]);
       if (!from || !to) continue;
-
       await _movePacket(packet, from.x, from.y, to.x, to.y);
     }
 
-    // Burst animation at destination
+    // Burst animation at destination, then remove
     packet.style.animation = 'packet-arrive 0.45s ease forwards';
-    await _delay(500);
-
+    await _delay(460);
     packet.remove();
   }
 
   /**
-   * Smoothly move the packet element from one point to another.
-   * Speed scales with distance (roughly 220 px/s).
+   * Move the packet element from (x1,y1) → (x2,y2) using
+   * requestAnimationFrame for frame-perfect linear animation.
+   *
+   * Speed ≈ 180 px/s, clamped between 300 ms and 1500 ms.
    *
    * @param {HTMLElement} el
-   * @param {number} x1 @param {number} y1
-   * @param {number} x2 @param {number} y2
+   * @param {number} x1  @param {number} y1  start position (px)
+   * @param {number} x2  @param {number} y2  end position (px)
    * @returns {Promise<void>}
    */
   function _movePacket(el, x1, y1, x2, y2) {
     return new Promise(resolve => {
       const dist     = Math.hypot(x2 - x1, y2 - y1);
-      const duration = Math.max(280, Math.min(1400, dist * 4.5)); // ms
+      const duration = Math.max(300, Math.min(1500, dist * 5.5)); // ms
+      const startTime = performance.now();
 
-      el.style.transition = `left ${duration}ms linear, top ${duration}ms linear`;
-      el.style.left = `${x2}px`;
-      el.style.top  = `${y2}px`;
+      function step(now) {
+        const t = Math.min((now - startTime) / duration, 1); // 0 → 1
 
-      setTimeout(resolve, duration);
+        // Linear interpolation along this segment
+        el.style.left = `${x1 + (x2 - x1) * t}px`;
+        el.style.top  = `${y1 + (y2 - y1) * t}px`;
+
+        if (t < 1) {
+          requestAnimationFrame(step);
+        } else {
+          resolve();
+        }
+      }
+
+      requestAnimationFrame(step);
     });
   }
 

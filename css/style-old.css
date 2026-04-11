@@ -121,32 +121,20 @@ body {
 
 .brand-top {
   display: flex;
-  align-items: flex-start;      /* Aligns toggle button to the top */
-  justify-content: center;      /* Centers the wordmark */
-  position: relative;
+  align-items: center;
+  justify-content: space-between;
 }
-
 .brand-wordmark {
   display: flex;
-  flex-direction: column;       /* Stacks icon on top of name */
-  align-items: center;          /* Centers them horizontally */
-  gap: 12px;
-  flex-grow: 1;
+  align-items: center;
+  gap: 8px;
 }
-
 .brand-icon {
-  width: 60px;
-  height: auto;
+  font-size: 1.5rem;
+  color: var(--accent);
+  line-height: 1;
   filter: drop-shadow(0 0 8px var(--accent));
 }
-
-/* Image fills the .brand-icon container */
-.brand-icon img {
-  width: 100%;
-  height: auto;
-  display: block;               /* Removes unwanted space below the image */
-}
-
 .brand-name {
   font-size: 1.1rem;
   font-weight: 900;
@@ -155,21 +143,16 @@ body {
   font-family: var(--font-mono);
   text-shadow: 0 0 16px var(--accent-glow);
 }
-
 .brand-tagline {
-  text-align: center;
   font-size: 0.6rem;
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 2px;
-  margin-top: 8px;
+  margin-top: 4px;
 }
 
-/* ── Theme toggle — pinned to top-right of brand-top ── */
+/* ── Theme toggle button ────────────────────────── */
 .theme-toggle {
-  position: absolute;
-  right: 0;
-  top: 0;
   background: var(--surface);
   border: 1.5px solid var(--border);
   border-radius: 8px;
@@ -408,16 +391,35 @@ body {
    SVG elements with no background fill are naturally transparent to pointer
    events in empty areas — clicks on open canvas fall through to #canvas-wrap.
    Only .connection-hit lines (pointer-events:stroke) catch cable clicks. */
+/* #svg-layer {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  overflow: visible;
+  z-index: 15;
+} */
+
+/* 1. Put the SVG layer BEHIND the Canvas - Luis - Gemini */
 #svg-layer {
   position: absolute; inset: 0;
   width: 100%; height: 100%;
   overflow: visible;
-  z-index: 10; /* Luis changed it from 15 */
+  z-index: 10; /* Changed back to 10 */
 }
+
+
 /* #canvas must NOT have pointer-events:none — that cascades to every child
    device div and makes them completely unresponsive. */
-#canvas      { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 10; }
-#packet-layer{ position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 30; }
+/* #canvas      { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 10; } */
+
+/* 2. Put Canvas ON TOP, but let clicks fall through its empty space - Luis - Gemini */
+#canvas { 
+  position: absolute; inset: 0; 
+  width: 100%; height: 100%; 
+  z-index: 15; /* Changed back to 15 */
+  pointer-events: none; /* <--- This is the magic key */
+}
+
+#packet-layer{ position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 30; } 
 
 /* Empty state */
 #empty-hint {
@@ -552,6 +554,7 @@ body.tool-connect .device { cursor: crosshair; }
   /* Visual line — pointer-events handled by .connection-hit sibling */
   pointer-events: none;
   transition: stroke 0.22s, stroke-width 0.18s, opacity 0.18s;
+  /* z-index: 6; /* Luis added this line */
 }
 /* Hover: when mouse is over the hit area, highlight the visual line via ~ sibling selector */
 .connection-hit:hover ~ .connection-line        { stroke-width: 4.5; opacity: 1; stroke: var(--accent); filter: url(#glow-strong); }
@@ -577,7 +580,7 @@ body.tool-delete .connection-hit { cursor: not-allowed; }
   transform: translate(-50%, -50%);
   box-shadow: 0 0 8px var(--packet-color), 0 0 20px rgba(255,200,0,0.5);
   pointer-events: none;
-  z-index: 50;
+  z-index: 50; 
 }
 @keyframes packet-arrive {
   0%   { transform: translate(-50%,-50%) scale(1);   opacity: 1; }
@@ -637,8 +640,6 @@ body.tool-delete .connection-hit { cursor: not-allowed; }
   background: rgba(0,0,0,0.6);
   display: flex; align-items: center; justify-content: center;
   z-index: 100; backdrop-filter: blur(5px);
-  /* Explicit pointer-events so nothing in the canvas layer can ever block it */
-  pointer-events: auto;
   animation: backdrop-in 0.2s ease;
 }
 #modal-backdrop.hidden { display: none; }
@@ -651,7 +652,6 @@ body.tool-delete .connection-hit { cursor: not-allowed; }
   padding: 24px; min-width: 290px;
   display: flex; flex-direction: column; gap: 14px;
   box-shadow: 0 0 60px rgba(0,0,0,0.5);
-  pointer-events: auto;
   animation: modal-in 0.2s ease;
 }
 @keyframes modal-in { from { transform: scale(0.93); opacity:0; } to { transform:scale(1); opacity:1; } }
@@ -662,21 +662,12 @@ body.tool-delete .connection-hit { cursor: not-allowed; }
   background: var(--surface-2); border: 1.5px solid var(--border);
   border-radius: 7px; color: var(--text); font-family: var(--font-ui);
   font-size: 0.92rem; padding: 9px 12px; outline: none; width: 100%;
-  /* Override the body user-select:none so text in the input is selectable */
-  user-select: text;
-  -webkit-user-select: text;
-  pointer-events: auto;
   transition: border-color 0.2s;
 }
 #modal-input:focus { border-color: var(--accent); }
 
 .modal-actions { display: flex; gap: 10px; }
-.modal-actions .action-btn {
-  width: auto; flex: 1;
-  /* Ensure buttons are always clickable */
-  pointer-events: auto;
-  cursor: pointer;
-}
+.modal-actions .action-btn { width: auto; flex: 1; }
 
 /* ════════════════════════════════════════════════════
    SCROLLBARS
