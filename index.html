@@ -9,7 +9,6 @@
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-
   <!-- ═══ SIDEBAR ═══════════════════════════════════ -->
   <aside id="sidebar">
     <div class="brand">
@@ -54,7 +53,7 @@
         </button>
       </div>
 
-      <div class="palette-sub-title">Cable Type</div>
+      <div class="palette-sub-title">Connection Type</div>
       <div id="cable-type-row">
         <button class="cable-btn active" data-cable="ethernet" title="Solid line — wired Ethernet connection">
           🔌 Ethernet
@@ -78,6 +77,12 @@
       </select>
       <button id="btn-simulate" class="action-btn primary">▶ Send Packet</button>
       <button id="btn-clear-sim" class="action-btn secondary">Reset Highlights</button>
+    </div>
+
+    <!-- ── Submission ── -->
+    <div class="panel-section">
+      <div class="section-title">Submission</div>
+      <button id="btn-submit" class="action-btn secondary">📩 Submit</button>
     </div>
 
     <!-- ── Import / Export ── -->
@@ -136,6 +141,7 @@
       </div>
     </div>
 
+    <!-- Log panel -->
     <div id="log-panel">
       <div class="log-header">
         <span class="log-title">📋 Packet Trace Log</span>
@@ -143,7 +149,9 @@
       </div>
       <div id="log-body"></div>
     </div>
+
   </div>
+
 
   <!-- ═══ RENAME MODAL ══════════════════════════════ -->
   <div id="modal-backdrop" class="hidden">

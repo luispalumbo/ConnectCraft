@@ -13,7 +13,7 @@
  * Devices are listed alphabetically within each category.
  * Icon style: drawn in the spirit of Cisco Network Topology Icons.
  *
- * End devices     : Laptop, PC, Printer, Scanner, Smart Phone, Tablet
+ * End devices     : Laptop, PC, Printer, Smart TV, Smart Phone, Tablet
  * Network devices : Access Point, Firewall, Internet, Router, Server, Switch, Wireless Router
  */
 
@@ -65,24 +65,20 @@ const DEVICE_TYPES = {
 <circle cx="53" cy="31" r="3" fill="currentColor" fill-opacity="0.7"/>`
   },
 
-  scanner: {
-    label:       'Scanner',
-    description: 'Flatbed scanner — scans documents and sends them across the network.',
+  smart_tv: {
+    label:       'Smart TV',
+    description: 'Smart TV — a wired or wireless end device used to stream content or display information.',
     color:       '#38bdf8',
     bg:          '#071c2e',
-    prefix:      'Scanner',
+    prefix:      'TV',
     category:    'end',
-    // Flatbed scanner: lid on top, scanning bed below, scan-head line, status LEDs, feet
-    svg: `<rect x="5" y="8" width="54" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="2.5"/>
-<line x1="12" y1="15" x2="44" y2="15" stroke="currentColor" stroke-width="1.8" stroke-dasharray="4 3"/>
-<rect x="5" y="22" width="54" height="18" rx="2" fill="none" stroke="currentColor" stroke-width="3"/>
-<rect x="10" y="27" width="36" height="8" fill="currentColor" fill-opacity="0.18"/>
-<line x1="24" y1="27" x2="24" y2="35" stroke="currentColor" stroke-width="2.5"/>
-<circle cx="49" cy="29" r="2.5" fill="currentColor" fill-opacity="0.8"/>
-<circle cx="49" cy="35" r="2.5" fill="currentColor" fill-opacity="0.8"/>
-<line x1="12" y1="40" x2="12" y2="50" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
-<line x1="52" y1="40" x2="52" y2="50" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
-<line x1="8" y1="50" x2="56" y2="50" stroke="currentColor" stroke-width="2.5"/>`
+    // Widescreen TV: wide frame, screen area, stand neck, base
+    svg: `<rect x="3" y="6" width="58" height="38" rx="3" fill="none" stroke="currentColor" stroke-width="3"/>
+<rect x="8" y="11" width="48" height="28" fill="currentColor" fill-opacity="0.18"/>
+<line x1="28" y1="44" x2="28" y2="52" stroke="currentColor" stroke-width="2.5"/>
+<line x1="36" y1="44" x2="36" y2="52" stroke="currentColor" stroke-width="2.5"/>
+<line x1="20" y1="52" x2="44" y2="52" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+<circle cx="56" cy="38" r="2.5" fill="currentColor" fill-opacity="0.8"/>`
   },
 
   phone: {
