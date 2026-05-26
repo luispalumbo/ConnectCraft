@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Local Network Simulator</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+   
+  <div id="sidebar">
+    <h3>Network Tools</h3>
+    
+    <div class="section-title">End Devices</div>
+    <div class="tool-grid">
+      <div class="tool" draggable="true" data-type="pc">🖥️ PC</div>
+      <div class="tool" draggable="true" data-type="laptop">💻 Laptop</div>
+      <div class="tool" draggable="true" data-type="phone">📱 Phone</div>
+      <div class="tool" draggable="true" data-type="printer">🖨️ Printer</div>
+    </div>
+
+    <div class="section-title">Network Devices</div>
+    <div class="tool-grid">
+      <div class="tool" draggable="true" data-type="server">🗄️ Server</div>
+      <div class="tool" draggable="true" data-type="switch">🔀 Switch</div>
+      <div class="tool" draggable="true" data-type="router">🌐 Router</div>
+      <div class="tool" draggable="true" data-type="ap">📡 AP</div>
+      <div class="tool" draggable="true" data-type="internet">☁️ Internet</div>
+    </div>
+    
+    <div class="section-title">Actions</div>
+    <button id="btn-move" class="active">✋ Move Nodes</button>
+    <button id="btn-connect">🔌 Draw Cables</button>
+    <button id="btn-ping">✉️ Send Ping</button>
+    
+    <div id="status-box">Mode: Move. Drag items to the canvas.</div>
+
+    <div class="section-title">Data</div>
+    <button id="btn-export">💾 Export</button>
+    <button id="btn-import">📂 Import</button>
+    <input type="file" id="file-input" style="display: none;" accept=".json">
+
+  </div>
+
+    
+  <div id="canvas-container">
+    <svg id="links-layer"></svg>
+    <!-- Add this line below the SVG -->
+    <div id="console-log"></div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ConnectCraft - Local Network Simulator</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Sidebar -->
+  <div id="sidebar">
+    <div id="app-header">
+      <div id="app-logo">🖥️↔️📡</div>
+      <div id="app-title">ConnectCraft</div>
+      <div id="app-subtitle">NETWORK SIMULATOR</div>
+    </div>
+    
+    <div id="sidebar-content">
+      <div class="sidebar-category">
+        <div class="category-header">DEVICES</div>
+        <div class="category-subheader">Drag onto the canvas</div>
+      </div>
+
+      <div class="section-title">END DEVICES</div>
+      <div class="tool-grid">
+        <div class="tool" draggable="true" data-type="laptop">💻 Laptop</div>
+        <div class="tool" draggable="true" data-type="pc">🖥️ PC</div>
+        <div class="tool" draggable="true" data-type="printer">🖨️ Printer</div>
+        <div class="tool" draggable="true" data-type="scanner">🖨️ Scanner</div>
+        <div class="tool" draggable="true" data-type="phone">📱 Smart Phone</div>
+        <div class="tool" draggable="true" data-type="tablet">📱 Tablet</div>
+        <div class="tool" draggable="true" data-type="server">🗄️ Server</div>
+      </div>
+
+      <div class="section-title">NETWORK DEVICES</div>
+      <div class="tool-grid">
+        <div class="tool" draggable="true" data-type="ap">📡 Access Point</div>
+        <div class="tool" draggable="true" data-type="firewall">🧱 Firewall</div>
+        <div class="tool" draggable="true" data-type="internet">☁️ Internet</div>
+        <div class="tool" draggable="true" data-type="router">🌐 Router</div>
+        <div class="tool" draggable="true" data-type="switch">🔀 Switch</div>
+        <div class="tool" draggable="true" data-type="wireless_router">📡 Wireless Router</div>
+      </div>
+      
+      <div class="section-title">ACTIONS</div>
+      <div id="action-buttons">
+        <button id="btn-move" class="active">⊹ Select & Move</button>
+        <button id="btn-ping">▶ Send Packet</button>
+      </div>
+
+      <div class="section-title">CONNECTIONS</div>
+      <div id="cable-buttons">
+        <button id="btn-connect-eth">🔌 Ethernet</button>
+        <button id="btn-connect-wifi">📶 Wireless</button>
+      </div>
+      
+      <div class="section-title">DATA</div>
+      <div id="data-buttons">
+        <button id="btn-export">📤 Export JSON</button>
+        <button id="btn-import">📥 Import JSON</button>
+        <input type="file" id="file-input" style="display: none;" accept=".json">
+      </div>
+
+      <div class="section-title" style="color: #ef4444;">DANGER ZONE</div>
+      <div id="danger-buttons">
+        <button id="btn-clear-canvas" class="danger-btn">🗑 Clear Canvas</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Canvas and Status Area -->
+  <div id="main-content">
+    
+    <!-- Top Status Bar -->
+    <div id="top-bar">
+      <div id="status-box">Mode: Move. Drag items from the menu, or click and drag them on the canvas.</div>
+      <div id="count-display">
+        <div id="device-count">0 devices</div>
+        <div id="link-count">0 connections</div>
+      </div>
+    </div>
+
+    <!-- The Canvas -->
+    <div id="canvas-container">
+      <svg id="links-layer"></svg>
+    </div>
+
+    <!-- Bottom Log Bar -->
+    <div id="console-header">
+      <div id="console-title">📋 Packet Trace Log</div>
+      <button id="btn-clear-log">Clear</button>
+    </div>
+    <div id="console-log"></div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
