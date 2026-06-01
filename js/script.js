@@ -16,12 +16,12 @@ let selectedNodeId = null;
 
 // Update type map
 const typeMap = {
-  laptop: "💻", pc: "🖥️", printer: "🖨️", scanner: "🖨️", phone: "📱", tablet: "📱", server: "🗄️",
-  ap: "📡", firewall: "🧱", internet: "☁️", router: "🌐", switch: "🔀", wireless_router: "📡"
+  laptop: "💻", pc: "🖥️", printer: "🖨️", tv: "📺", phone: "📱", tablet: "📱", server: "🗄️",
+  ap: "📡", firewall: "🔥", internet: "☁️", router: "🌐", switch: "🔀", wireless_router: "🛜"
 };
 
 const labelMap = {
-  laptop: "Laptop", pc: "PC", printer: "Printer", scanner: "Scanner", phone: "Smart Phone", tablet: "Tablet", server: "Server",
+  laptop: "Laptop", pc: "PC", printer: "Printer", tv: "Smart TV", phone: "Smart Phone", tablet: "Tablet", server: "Server",
   ap: "Access Point", firewall: "Firewall", internet: "Internet", router: "Router", switch: "Switch", wireless_router: "Wireless Router"
 };
 
@@ -264,7 +264,7 @@ function sendPing(srcId, dstId) {
   circle.setAttribute('class', 'packet');
   svgLayer.appendChild(circle);
   
-  const hopDuration = 600;
+  const hopDuration = 1000;
   let currentHop = 0;
   let startTime = performance.now();
 
