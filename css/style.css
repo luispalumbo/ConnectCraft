@@ -72,7 +72,7 @@ body {
   cursor: grab; 
   text-align: center; 
   border-radius: 4px; 
-  font-size: 0.7rem; 
+  font-size: 0.9rem; 
   transition: all 0.2s;
   border: 1px solid var(--border-dark);
   color: var(--text-mute);
@@ -104,7 +104,7 @@ button {
   width: 100%;
   padding: 8px;
   margin-bottom: 8px;
-  font-size: 0.8rem;
+  font-size: 0.9rem;
   background: var(--bg-dark);
   color: var(--text-mute);
   border: 1px solid var(--border-dark);
