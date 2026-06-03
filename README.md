@@ -13,15 +13,13 @@ Students drag network devices onto a canvas, cable them together using Ethernet 
 | **Drag & Drop** | Drag devices from the sidebar onto the canvas to build a topology |
 | **Two Palette Sections** | Devices are organised into **End Devices** and **Network Devices** |
 | **Connect Tool** | Draw cables between any two devices |
-| **Cable Types** | Choose **Ethernet** (solid cyan line) or **Wireless** (dashed violet line) before connecting |
-| **Delete Tool** | Click any device (removes it **and** all its cables) or click any cable to remove it |
+| **Cable Types** | Choose **Ethernet Cable** (solid cyan line) or **Wireless** (dashed violet line) before connecting |
 | **Rename** | Double-click any device to give it a custom name |
 | **Packet Simulation** | Choose a source and destination — a glowing packet animates along the shortest route |
-| **BFS Pathfinding** | Breadth-First Search finds the shortest path (fewest hops) through the network |
 | **Packet Trace Log** | Timestamped log shows every hop the packet takes |
 | **Path Highlighting** | Devices and cables on the path glow green during simulation |
-| **Export JSON** | Save your topology to a `.json` file to submit or share |
-| **Import JSON** | Load a previously saved topology back into ConnectCraft |
+| **Export Configuration** | Save your topology to a `.json` file to submit or share |
+| **Import Configuration** | Load a previously saved topology back into ConnectCraft |
 
 ---
 
@@ -45,7 +43,6 @@ Infrastructure that connects and routes data between end devices.
 | ⚡ | **Switch** | Connects devices in one network; sends data only to the correct device |
 | 📡 | **Router** | Connects different networks; decides the best path for data |
 | 🗄️ | **Server** | Stores data or runs services (websites, email, etc.) |
-| 🔌 | **Hub** | Simple connector — broadcasts data to *all* devices (less efficient than a switch) |
 
 ---
 
@@ -57,7 +54,7 @@ No server, build tools, or installation required.
 2. Open `index.html` in any modern web browser (Chrome, Firefox, Edge, Safari)
 
 ```bash
-git clone https://github.com/<your-username>/connectcraft.git
+git clone https://github.com/luispalumbo/connectcraft.git
 cd connectcraft
 # Open index.html in your browser
 ```
