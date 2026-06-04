@@ -264,7 +264,7 @@ function sendPing(srcId, dstId) {
   circle.setAttribute('class', 'packet');
   svgLayer.appendChild(circle);
   
-  const hopDuration = 2000;
+  const hopDuration = 3000;
   let currentHop = 0;
   let startTime = performance.now();
 
